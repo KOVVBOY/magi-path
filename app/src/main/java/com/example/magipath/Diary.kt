@@ -10,6 +10,7 @@ data class DiaryEntry(
     val exerciseId: String,
     val stepIndex: Int,
     val feel: String,
+    val note: String,
     val timestamp: Long
 )
 
@@ -32,6 +33,9 @@ object Diary {
         cal.add(Calendar.DAY_OF_YEAR, -1)
         return fmt().format(cal.time)
     }
+
+    private fun sanitize(text: String): String =
+        text.replace(SEP, " ").replace(LINE, " ").trim()
 
     fun getXp(context: Context): Int {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -73,6 +77,7 @@ object Diary {
             entry.exerciseId,
             entry.stepIndex.toString(),
             entry.feel,
+            sanitize(entry.note),
             entry.timestamp.toString()
         ).joinToString(SEP)
         val updated = if (current.isEmpty()) line else current + LINE + line
@@ -85,13 +90,23 @@ object Diary {
         if (raw.isEmpty()) return emptyList()
         return raw.split(LINE).mapNotNull { line ->
             val parts = line.split(SEP)
-            if (parts.size < 4) return@mapNotNull null
-            DiaryEntry(
-                exerciseId = parts[0],
-                stepIndex = parts[1].toIntOrNull() ?: 0,
-                feel = parts[2],
-                timestamp = parts[3].toLongOrNull() ?: 0L
-            )
+            when (parts.size) {
+                4 -> DiaryEntry(
+                    exerciseId = parts[0],
+                    stepIndex = parts[1].toIntOrNull() ?: 0,
+                    feel = parts[2],
+                    note = "",
+                    timestamp = parts[3].toLongOrNull() ?: 0L
+                )
+                5 -> DiaryEntry(
+                    exerciseId = parts[0],
+                    stepIndex = parts[1].toIntOrNull() ?: 0,
+                    feel = parts[2],
+                    note = parts[3],
+                    timestamp = parts[4].toLongOrNull() ?: 0L
+                )
+                else -> null
+            }
         }
     }
 }
