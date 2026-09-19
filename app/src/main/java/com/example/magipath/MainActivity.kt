@@ -47,7 +47,8 @@ fun App() {
                     },
                     onOpenDiary = { screen = "diary" },
                     onOpenSettings = { screen = "settings" },
-                    onOpenPlan = { screen = "plan" }
+                    onOpenPlan = { screen = "plan" },
+                    onOpenHelp = { screen = "help" }
                 )
                 "exercise" -> {
                     val ex = exercises.first { it.id == currentId }
@@ -72,6 +73,7 @@ fun App() {
                         screen = "exercise"
                     }
                 )
+                "help" -> HelpScreen(onBack = { screen = "menu" })
             }
         }
     }
