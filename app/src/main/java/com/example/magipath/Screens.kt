@@ -28,9 +28,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
-fun MenuScreen(onOpen: (String) -> Unit) {
+fun MenuScreen(
+    onOpen: (String) -> Unit,
+    onOpenDiary: () -> Unit
+) {
     val context = LocalContext.current
     val xp = Diary.getXp(context)
     val entryCount = Diary.getEntries(context).size
@@ -52,6 +58,12 @@ fun MenuScreen(onOpen: (String) -> Unit) {
             "Записей в дневнике: $entryCount",
             style = MaterialTheme.typography.bodySmall
         )
+
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(onClick = onOpenDiary) {
+            Text("Открыть дневник")
+        }
+
         Spacer(Modifier.height(20.dp))
 
         exercises.forEach { ex ->
@@ -224,4 +236,63 @@ fun FeelDialog(onPick: (String) -> Unit, onCancel: () -> Unit) {
             TextButton(onClick = onCancel) { Text("Отмена") }
         }
     )
+}
+
+@Composable
+fun DiaryScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val entries = Diary.getEntries(context).reversed()
+    val xp = Diary.getXp(context)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+    ) {
+        TextButton(onClick = onBack) { Text("← Назад") }
+
+        Spacer(Modifier.height(16.dp))
+        Text("Дневник", style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Всего опыта: $xp XP",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(Modifier.height(20.dp))
+
+        if (entries.isEmpty()) {
+            Text("Пока пусто. Пройди любой шаг — запись появится здесь.")
+        } else {
+            val fmt = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+
+            entries.forEach { entry ->
+                val ex = exercises.firstOrNull { it.id == entry.exerciseId }
+                val exTitle = ex?.title ?: entry.exerciseId
+                val stepTitle = ex?.steps?.getOrNull(entry.stepIndex)?.title ?: "шаг ${entry.stepIndex + 1}"
+                val feelText = when (entry.feel) {
+                    "easy" -> "Легко"
+                    "hard" -> "Тяжело"
+                    else -> "Обычно"
+                }
+
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "$exTitle — $stepTitle",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text("Состояние: $feelText")
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            fmt.format(Date(entry.timestamp)),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+    }
 }
