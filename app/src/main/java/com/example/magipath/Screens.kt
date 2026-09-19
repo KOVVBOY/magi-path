@@ -1,5 +1,7 @@
 package com.example.magipath
 
+import android.media.AudioManager
+import android.media.ToneGenerator
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,11 +16,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -93,6 +97,8 @@ fun MenuScreen(
     }
 }
 
+val TIME_MARKERS = listOf(60, 180, 300, 600)
+
 @Composable
 fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
     val context = LocalContext.current
@@ -101,11 +107,29 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
     var running by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
     var isLastStep by remember { mutableStateOf(false) }
+    var soundOn by remember { mutableStateOf(true) }
+    var firedMarkers by remember { mutableStateOf(setOf<Int>()) }
+
+    val tone = remember {
+        ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90)
+    }
+    DisposableEffect(Unit) {
+        onDispose { tone.release() }
+    }
 
     LaunchedEffect(running) {
         while (running) {
             delay(1000)
             seconds++
+        }
+    }
+
+    LaunchedEffect(seconds) {
+        if (seconds in TIME_MARKERS && seconds !in firedMarkers) {
+            firedMarkers = firedMarkers + seconds
+            if (soundOn) {
+                tone.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
+            }
         }
     }
 
@@ -132,6 +156,7 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
                     Progress.setStep(context, exercise.id, stepIndex)
                     seconds = 0
                     running = false
+                    firedMarkers = emptySet()
                 }
             },
             onCancel = { showDialog = false }
@@ -159,7 +184,40 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
         Text(step.description)
 
         Spacer(Modifier.height(24.dp))
-        Text("Время: $seconds сек", style = MaterialTheme.typography.titleLarge)
+        Text(
+            "Время: ${formatTime(seconds)}",
+            style = MaterialTheme.typography.headlineMedium
+        )
+
+        Spacer(Modifier.height(8.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            TIME_MARKERS.forEach { marker ->
+                val reached = seconds >= marker
+                Text(
+                    text = "${marker / 60}м",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (reached) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Row(
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = soundOn,
+                onCheckedChange = { soundOn = it }
+            )
+            Text("Звук на 1, 3, 5, 10 минутах")
+        }
 
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -169,6 +227,7 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
             OutlinedButton(onClick = {
                 seconds = 0
                 running = false
+                firedMarkers = emptySet()
             }) {
                 Text("Сброс")
             }
@@ -183,6 +242,7 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
                         Progress.setStep(context, exercise.id, stepIndex)
                         seconds = 0
                         running = false
+                        firedMarkers = emptySet()
                     }
                 },
                 enabled = stepIndex > 0
@@ -199,6 +259,12 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
             }
         }
     }
+}
+
+fun formatTime(totalSeconds: Int): String {
+    val m = totalSeconds / 60
+    val s = totalSeconds % 60
+    return "%02d:%02d".format(m, s)
 }
 
 @Composable
