@@ -20,6 +20,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -165,13 +166,14 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
 
     if (showDialog) {
         FeelDialog(
-            onPick = { feel ->
+            onPick = { feel, note ->
                 Diary.addEntry(
                     context,
                     DiaryEntry(
                         exerciseId = exercise.id,
                         stepIndex = stepIndex,
                         feel = feel,
+                        note = note,
                         timestamp = System.currentTimeMillis()
                     )
                 )
@@ -298,34 +300,44 @@ fun formatTime(totalSeconds: Int): String {
 }
 
 @Composable
-fun FeelDialog(onPick: (String) -> Unit, onCancel: () -> Unit) {
+fun FeelDialog(onPick: (String, String) -> Unit, onCancel: () -> Unit) {
+    var note by remember { mutableStateOf("") }
+
     AlertDialog(
         onDismissRequest = onCancel,
         title = { Text("Как прошёл шаг?") },
         text = {
             Column {
-                Text("Отметь состояние. Это поможет отслеживать прогресс.")
+                Text("Отметь состояние. Заметка — по желанию.")
                 Spacer(Modifier.height(16.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
-                        onClick = { onPick("easy") },
+                        onClick = { onPick("easy", note) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Легко")
                     }
                     OutlinedButton(
-                        onClick = { onPick("normal") },
+                        onClick = { onPick("normal", note) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Обычно")
                     }
                     OutlinedButton(
-                        onClick = { onPick("hard") },
+                        onClick = { onPick("hard", note) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Тяжело")
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text("Заметка") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = false
+                )
             }
         },
         confirmButton = {
@@ -382,6 +394,13 @@ fun DiaryScreen(onBack: () -> Unit) {
                         )
                         Spacer(Modifier.height(4.dp))
                         Text("Состояние: $feelText")
+                        if (entry.note.isNotEmpty()) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Заметка: ${entry.note}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                         Spacer(Modifier.height(4.dp))
                         Text(
                             fmt.format(Date(entry.timestamp)),
