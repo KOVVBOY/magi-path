@@ -17,6 +17,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -43,6 +44,9 @@ fun MenuScreen(
 ) {
     val context = LocalContext.current
     val xp = Diary.getXp(context)
+    val level = Diary.getLevel(context)
+    val xpInLevel = Diary.getXpInLevel(context)
+    val streak = Diary.getStreak(context)
     val entryCount = Diary.getEntries(context).size
 
     Column(
@@ -52,14 +56,31 @@ fun MenuScreen(
             .padding(24.dp)
     ) {
         Text("МагиПуть", style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            "Уровень $level",
+            style = MaterialTheme.typography.titleLarge
+        )
+        Spacer(Modifier.height(6.dp))
+        LinearProgressIndicator(
+            progress = { xpInLevel / 100f },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Опыт: $xpInLevel / 100 до уровня ${level + 1}",
+            style = MaterialTheme.typography.bodySmall
+        )
+
         Spacer(Modifier.height(8.dp))
         Text(
-            "Опыт: $xp XP",
+            "Дней подряд: $streak",
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "Записей в дневнике: $entryCount",
+            "Всего опыта: $xp XP · Записей: $entryCount",
             style = MaterialTheme.typography.bodySmall
         )
 
@@ -148,6 +169,7 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
                     )
                 )
                 Diary.addXp(context, 10)
+                Diary.registerPracticeToday(context)
                 showDialog = false
                 if (isLastStep) {
                     onBack()
@@ -309,6 +331,7 @@ fun DiaryScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val entries = Diary.getEntries(context).reversed()
     val xp = Diary.getXp(context)
+    val level = Diary.getLevel(context)
 
     Column(
         modifier = Modifier
@@ -322,7 +345,7 @@ fun DiaryScreen(onBack: () -> Unit) {
         Text("Дневник", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Всего опыта: $xp XP",
+            "Уровень $level · $xp XP",
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(Modifier.height(20.dp))
@@ -335,7 +358,8 @@ fun DiaryScreen(onBack: () -> Unit) {
             entries.forEach { entry ->
                 val ex = exercises.firstOrNull { it.id == entry.exerciseId }
                 val exTitle = ex?.title ?: entry.exerciseId
-                val stepTitle = ex?.steps?.getOrNull(entry.stepIndex)?.title ?: "шаг ${entry.stepIndex + 1}"
+                val stepTitle = ex?.steps?.getOrNull(entry.stepIndex)?.title
+                    ?: "шаг ${entry.stepIndex + 1}"
                 val feelText = when (entry.feel) {
                     "easy" -> "Легко"
                     "hard" -> "Тяжело"
