@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +32,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun MenuScreen(onOpen: (String) -> Unit) {
     val context = LocalContext.current
+    val xp = Diary.getXp(context)
+    val entryCount = Diary.getEntries(context).size
 
     Column(
         modifier = Modifier
@@ -41,8 +44,13 @@ fun MenuScreen(onOpen: (String) -> Unit) {
         Text("МагиПуть", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Упражнения начального уровня",
-            style = MaterialTheme.typography.bodyMedium
+            "Опыт: $xp XP",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Записей в дневнике: $entryCount",
+            style = MaterialTheme.typography.bodySmall
         )
         Spacer(Modifier.height(20.dp))
 
@@ -79,6 +87,8 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
     var stepIndex by remember { mutableStateOf(Progress.getStep(context, exercise.id)) }
     var seconds by remember { mutableStateOf(0) }
     var running by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
+    var isLastStep by remember { mutableStateOf(false) }
 
     LaunchedEffect(running) {
         while (running) {
@@ -88,6 +98,33 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
     }
 
     val step = exercise.steps[stepIndex.coerceIn(0, exercise.steps.size - 1)]
+
+    if (showDialog) {
+        FeelDialog(
+            onPick = { feel ->
+                Diary.addEntry(
+                    context,
+                    DiaryEntry(
+                        exerciseId = exercise.id,
+                        stepIndex = stepIndex,
+                        feel = feel,
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+                Diary.addXp(context, 10)
+                showDialog = false
+                if (isLastStep) {
+                    onBack()
+                } else {
+                    stepIndex++
+                    Progress.setStep(context, exercise.id, stepIndex)
+                    seconds = 0
+                    running = false
+                }
+            },
+            onCancel = { showDialog = false }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -142,18 +179,49 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
             }
             Button(
                 onClick = {
-                    if (stepIndex < exercise.steps.size - 1) {
-                        stepIndex++
-                        Progress.setStep(context, exercise.id, stepIndex)
-                        seconds = 0
-                        running = false
-                    } else {
-                        onBack()
-                    }
+                    isLastStep = stepIndex >= exercise.steps.size - 1
+                    showDialog = true
                 }
             ) {
                 Text(if (stepIndex < exercise.steps.size - 1) "Дальше" else "Готово")
             }
         }
     }
+}
+
+@Composable
+fun FeelDialog(onPick: (String) -> Unit, onCancel: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text("Как прошёл шаг?") },
+        text = {
+            Column {
+                Text("Отметь состояние. Это поможет отслеживать прогресс.")
+                Spacer(Modifier.height(16.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { onPick("easy") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Легко")
+                    }
+                    OutlinedButton(
+                        onClick = { onPick("normal") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Обычно")
+                    }
+                    OutlinedButton(
+                        onClick = { onPick("hard") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Тяжело")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onCancel) { Text("Отмена") }
+        }
+    )
 }
