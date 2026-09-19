@@ -44,7 +44,8 @@ fun MenuScreen(
     onOpen: (String) -> Unit,
     onOpenDiary: () -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenPlan: () -> Unit
+    onOpenPlan: () -> Unit,
+    onOpenHelp: () -> Unit
 ) {
     val context = LocalContext.current
     val xp = Diary.getXp(context)
@@ -99,10 +100,15 @@ fun MenuScreen(
         )
 
         Spacer(Modifier.height(12.dp))
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onOpenPlan) { Text("Путь") }
             OutlinedButton(onClick = onOpenDiary) { Text("Дневник") }
-            OutlinedButton(onClick = onOpenSettings) { Text("Ещё") }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onOpenHelp) { Text("Помощь") }
+            OutlinedButton(onClick = onOpenSettings) { Text("Настройки") }
         }
 
         Spacer(Modifier.height(20.dp))
@@ -278,13 +284,48 @@ fun PlanScreen(
             Text("Начать путь заново")
         }
 
-        // используется для перерисовки при изменении чекбоксов
         Text(
             "",
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(0.dp)
         )
         if (refresh < 0) Text("unreachable")
+    }
+}
+
+@Composable
+fun HelpScreen(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+    ) {
+        TextButton(onClick = onBack) { Text("← Назад") }
+
+        Spacer(Modifier.height(16.dp))
+        Text("Помощь", style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Мануал по приложению",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(Modifier.height(20.dp))
+
+        helpSections.forEach { section ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        section.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(section.body, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
     }
 }
 
