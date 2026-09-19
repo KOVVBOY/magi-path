@@ -99,29 +99,42 @@ fun MenuScreen(
 
         Spacer(Modifier.height(20.dp))
 
-        exercises.forEach { ex ->
-            val saved = Progress.getStep(context, ex.id)
-            val done = saved >= ex.steps.size - 1
-            val status = if (done) {
-                "Завершено"
-            } else {
-                "Прогресс: шаг ${saved + 1} из ${ex.steps.size}"
+        val categories = exercises.map { it.category }.distinct()
+
+        categories.forEach { category ->
+            Text(
+                category,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(8.dp))
+
+            exercises.filter { it.category == category }.forEach { ex ->
+                val saved = Progress.getStep(context, ex.id)
+                val done = saved >= ex.steps.size - 1
+                val status = if (done) {
+                    "Завершено"
+                } else {
+                    "Прогресс: шаг ${saved + 1} из ${ex.steps.size}"
+                }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpen(ex.id) }
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(ex.title, style = MaterialTheme.typography.titleLarge)
+                        Spacer(Modifier.height(4.dp))
+                        Text(ex.subtitle, style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(8.dp))
+                        Text(status, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
             }
 
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onOpen(ex.id) }
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(ex.title, style = MaterialTheme.typography.titleLarge)
-                    Spacer(Modifier.height(4.dp))
-                    Text(ex.subtitle, style = MaterialTheme.typography.bodyMedium)
-                    Spacer(Modifier.height(8.dp))
-                    Text(status, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
