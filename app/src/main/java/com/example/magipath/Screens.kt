@@ -43,7 +43,8 @@ import java.util.Locale
 fun MenuScreen(
     onOpen: (String) -> Unit,
     onOpenDiary: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenPlan: () -> Unit
 ) {
     val context = LocalContext.current
     val xp = Diary.getXp(context)
@@ -51,6 +52,9 @@ fun MenuScreen(
     val xpInLevel = Diary.getXpInLevel(context)
     val streak = Diary.getStreak(context)
     val entryCount = Diary.getEntries(context).size
+
+    val stageIndex = PlanProgress.getCurrentStage(context)
+    val stage = planStages[stageIndex]
 
     Column(
         modifier = Modifier
@@ -87,14 +91,18 @@ fun MenuScreen(
             style = MaterialTheme.typography.bodySmall
         )
 
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Ступень ${stageIndex + 1}: ${stage.title}",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onOpenDiary) {
-                Text("Дневник")
-            }
-            OutlinedButton(onClick = onOpenSettings) {
-                Text("Настройки")
-            }
+            OutlinedButton(onClick = onOpenPlan) { Text("Путь") }
+            OutlinedButton(onClick = onOpenDiary) { Text("Дневник") }
+            OutlinedButton(onClick = onOpenSettings) { Text("Ещё") }
         }
 
         Spacer(Modifier.height(20.dp))
@@ -136,6 +144,147 @@ fun MenuScreen(
 
             Spacer(Modifier.height(8.dp))
         }
+    }
+}
+
+@Composable
+fun PlanScreen(
+    onBack: () -> Unit,
+    onOpenExercise: (String) -> Unit
+) {
+    val context = LocalContext.current
+    var refresh by remember { mutableStateOf(0) }
+    var showReset by remember { mutableStateOf(false) }
+
+    val stageIndex = PlanProgress.getCurrentStage(context)
+    val stage = planStages[stageIndex]
+    val week = PlanProgress.getWeekInStage(context)
+    val done = PlanProgress.getTodayDone(context)
+    val totalTasks = stage.tasks.size
+    val doneCount = done.count { it in 0 until totalTasks }
+
+    if (showReset) {
+        AlertDialog(
+            onDismissRequest = { showReset = false },
+            title = { Text("Начать путь заново?") },
+            text = {
+                Text(
+                    "Отметки ступени сбросятся, отсчёт пойдёт с сегодняшнего дня. " +
+                        "Опыт и дневник останутся."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    PlanProgress.startOver(context)
+                    showReset = false
+                    refresh++
+                }) {
+                    Text("Начать заново")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReset = false }) { Text("Отмена") }
+            }
+        )
+    }
+
+    val weekFrom = stageIndex * 2 + 1
+    val weekTo = weekFrom + 1
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+    ) {
+        TextButton(onClick = onBack) { Text("← Назад") }
+
+        Spacer(Modifier.height(16.dp))
+        Text("Путь", style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Недели $weekFrom–$weekTo · текущая неделя: $week",
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "Ступень ${stageIndex + 1}: ${stage.title}",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(stage.description)
+
+        Spacer(Modifier.height(20.dp))
+        Text(
+            "Сегодня: $doneCount из $totalTasks",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(Modifier.height(8.dp))
+        LinearProgressIndicator(
+            progress = { doneCount.toFloat() / totalTasks.toFloat() },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        stage.tasks.forEachIndexed { index, task ->
+            val ex = exercises.firstOrNull { it.id == task.exerciseId }
+            val title = ex?.title ?: task.exerciseId
+            val isDone = index in done
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenExercise(task.exerciseId) }
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = isDone,
+                        onCheckedChange = {
+                            PlanProgress.toggle(context, index)
+                            refresh++
+                        }
+                    )
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 4.dp)
+                    ) {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            "${task.label} · ${task.minutes} мин",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+
+        Spacer(Modifier.height(16.dp))
+        OutlinedButton(
+            onClick = { showReset = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Начать путь заново")
+        }
+
+        // используется для перерисовки при изменении чекбоксов
+        Text(
+            "",
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(0.dp)
+        )
+        if (refresh < 0) Text("unreachable")
     }
 }
 
