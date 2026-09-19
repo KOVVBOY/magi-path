@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -40,7 +41,8 @@ import java.util.Locale
 @Composable
 fun MenuScreen(
     onOpen: (String) -> Unit,
-    onOpenDiary: () -> Unit
+    onOpenDiary: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val context = LocalContext.current
     val xp = Diary.getXp(context)
@@ -85,8 +87,13 @@ fun MenuScreen(
         )
 
         Spacer(Modifier.height(12.dp))
-        OutlinedButton(onClick = onOpenDiary) {
-            Text("Открыть дневник")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onOpenDiary) {
+                Text("Дневник")
+            }
+            OutlinedButton(onClick = onOpenSettings) {
+                Text("Настройки")
+            }
         }
 
         Spacer(Modifier.height(20.dp))
@@ -128,7 +135,7 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
     var running by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
     var isLastStep by remember { mutableStateOf(false) }
-    var soundOn by remember { mutableStateOf(true) }
+    var soundOn by remember { mutableStateOf(Settings.isSoundOn(context)) }
     var firedMarkers by remember { mutableStateOf(setOf<Int>()) }
 
     val tone = remember {
@@ -231,12 +238,13 @@ fun ExerciseScreen(exercise: Exercise, onBack: () -> Unit) {
         }
 
         Spacer(Modifier.height(16.dp))
-        Row(
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
                 checked = soundOn,
-                onCheckedChange = { soundOn = it }
+                onCheckedChange = {
+                    soundOn = it
+                    Settings.setSoundOn(context, it)
+                }
             )
             Text("Звук на 1, 3, 5, 10 минутах")
         }
@@ -383,6 +391,72 @@ fun DiaryScreen(onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
             }
+        }
+    }
+}
+
+@Composable
+fun SettingsScreen(
+    dark: Boolean,
+    onDarkChange: (Boolean) -> Unit,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    var showResetDialog by remember { mutableStateOf(false) }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("Сбросить всё?") },
+            text = {
+                Text(
+                    "Весь прогресс, опыт, дневник и настройки будут удалены. " +
+                        "Это действие нельзя отменить."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    Settings.resetAll(context)
+                    showResetDialog = false
+                    onBack()
+                }) {
+                    Text("Удалить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+    ) {
+        TextButton(onClick = onBack) { Text("← Назад") }
+
+        Spacer(Modifier.height(16.dp))
+        Text("Настройки", style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(20.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = dark,
+                onCheckedChange = onDarkChange
+            )
+            Text("Тёмная тема")
+        }
+
+        Spacer(Modifier.height(24.dp))
+        OutlinedButton(
+            onClick = { showResetDialog = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Сбросить весь прогресс")
         }
     }
 }
