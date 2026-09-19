@@ -34,7 +34,8 @@ fun App() {
             onOpen = { id ->
                 currentId = id
                 screen = "exercise"
-            }
+            },
+            onOpenDiary = { screen = "diary" }
         )
         "exercise" -> {
             val ex = exercises.first { it.id == currentId }
@@ -43,5 +44,6 @@ fun App() {
                 onBack = { screen = "menu" }
             )
         }
+        "diary" -> DiaryScreen(onBack = { screen = "menu" })
     }
 }
